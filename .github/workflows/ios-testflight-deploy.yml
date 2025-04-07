@@ -1,0 +1,40 @@
+name: Build and Upload iOS App to TestFlight
+
+#on:
+#  push:
+#    tags:
+#      - '*-ios' # Trigger on tagging a commit with suffix "-ios" (e.g., 1.0.0-ios)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deployIos:
+    runs-on: macos-latest
+
+    env:
+      API_KEY_INFO: ${{ secrets.API_KEY_INFO }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 3.3.5
+          bundler-cache: true
+          working-directory: iosApp
+
+      - name: Set up API key file
+        run: |
+          mkdir -p iosApp/fastlane
+          echo "$API_KEY_INFO" > iosApp/fastlane/api_key_info.json
+
+      - name: Run Fastlane beta lane
+        env:
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
+        run: |
+            cd iosApp
+            bundle exec fastlane ios beta
