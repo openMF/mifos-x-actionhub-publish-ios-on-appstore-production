@@ -1,19 +1,36 @@
-name: Build and Upload iOS App to TestFlight
-
-#on:
-#  push:
-#    tags:
-#      - '*-ios' # Trigger on tagging a commit with suffix "-ios" (e.g., 1.0.0-ios)
+name: Deploy iOS App to TestFlight
 
 on:
-  workflow_dispatch:
+  workflow_call:
+    inputs:
+      ruby-version:
+        required: false
+        type: string
+        default: '3.3.5'
+
+      working-directory:
+        required: true
+        type: string
+
+      scheme:
+        required: true
+        type: string
+
+    secrets:
+      APPSTORE_KEY_ID:
+        required: true
+      APPSTORE_ISSUER_ID:
+        required: true
+      APPSTORE_PRIVATE_KEY:
+        required: true
+      MATCH_PASSWORD:
+        required: true
+      MATCH_GIT_BASIC_AUTHORIZATION:
+        required: true
 
 jobs:
   deployIos:
     runs-on: macos-latest
-
-    env:
-      API_KEY_INFO: ${{ secrets.API_KEY_INFO }}
 
     steps:
       - name: Checkout repository
@@ -22,19 +39,21 @@ jobs:
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: 3.3.5
+          ruby-version: ${{ inputs.ruby-version }}
           bundler-cache: true
-          working-directory: iosApp
+          working-directory: ${{ inputs.working-directory }}
 
       - name: Set up API key file
         run: |
-          mkdir -p iosApp/fastlane
-          echo "$API_KEY_INFO" > iosApp/fastlane/api_key_info.json
+          mkdir -p "${{ inputs.working-directory }}/fastlane"
+          printf '%s' "${{ secrets.APPSTORE_PRIVATE_KEY }}" > "${{ inputs.working-directory }}/fastlane/Api_key.p8"
 
       - name: Run Fastlane beta lane
         env:
+          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+          APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
           MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
         run: |
-            cd iosApp
-            bundle exec fastlane ios beta
+          cd ${{ inputs.working-directory }}
+          bundle exec fastlane ios beta
