@@ -1,0 +1,45 @@
+name: Deploy iOS App to TestFlight
+description: Composite action to deploy iOS app using Fastlane
+
+inputs:
+  ruby-version:
+    description: Ruby version
+    required: false
+    default: '3.3.5'
+
+  appstore-key-id:
+    required: true
+  appstore-issuer-id:
+    required: true
+  appstore-private-key:
+    required: true
+  match-password:
+    required: true
+  match-git-basic-auth:
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Ruby
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: ${{ inputs.ruby-version }}
+        bundler-cache: true
+
+    - name: Set up API key file
+      run: |
+        mkdir -p fastlane
+        printf '%s' "${{ inputs.appstore-private-key }}" > fastlane/Api_key.p8
+      shell: bash
+
+    - name: Run Fastlane beta lane
+      env:
+        APPSTORE_KEY_ID: ${{ inputs.appstore-key-id }}
+        APPSTORE_ISSUER_ID: ${{ inputs.appstore-issuer-id }}
+        MATCH_PASSWORD: ${{ inputs.match-password }}
+        MATCH_GIT_BASIC_AUTHORIZATION: ${{ inputs.match-git-basic-auth }}
+      run: |
+        bundle install
+        bundle exec fastlane ios beta
+      shell: bash
