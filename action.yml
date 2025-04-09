@@ -22,9 +22,9 @@ inputs:
     required: true
     description: Password used to encrypt/decrypt the certificates repository used by match
 
-  match-git-basic-auth:
+  match-git-basic-authorization:
     required: true
-    description: GitHub basic auth string (e.g., `https://<token>@github.com/...`) for accessing the match repo
+    description: Base64-encoded GitHub Basic Auth token used by Fastlane Match to authenticate and securely clone the code signing certificates repository
 
 runs:
   using: composite
@@ -57,5 +57,5 @@ runs:
         APPSTORE_KEY_ID: ${{ inputs.appstore-key-id }}
         APPSTORE_ISSUER_ID: ${{ inputs.appstore-issuer-id }}
         MATCH_PASSWORD: ${{ inputs.match-password }}
-        MATCH_GIT_BASIC_AUTHORIZATION: ${{ inputs.match-git-basic-auth }}
+        MATCH_GIT_BASIC_AUTHORIZATION: ${{ inputs.match-git-basic-authorization }}
       run: bundle exec fastlane ios beta
