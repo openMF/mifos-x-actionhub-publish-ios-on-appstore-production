@@ -1,6 +1,6 @@
 name: 'Deploy iOS App to TestFlight'
 description: 'Publish the iOS app to TestFlight using Fastlane and App Store Connect API'
-author: Mifos Initiative'
+author: 'Mifos Initiative'
 branding:
   icon: upload
   color: blue
