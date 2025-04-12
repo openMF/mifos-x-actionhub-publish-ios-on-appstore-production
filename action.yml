@@ -46,8 +46,8 @@ runs:
     # Inflate .p8 private key from base64
     - name: Set up API key file
       run: |
-        mkdir -p fastlane
-        echo "${{ inputs.appstore-private-key }}" | base64 --decode > fastlane/Api_key.p8
+        mkdir -p secrets
+        echo "${{ inputs.appstore-private-key }}" | base64 --decode > secrets/Api_key.p8
       shell: bash
 
     # Run Fastlane lane to deploy to TestFlight
@@ -65,4 +65,4 @@ runs:
           appstore_issuer_id:${{ env.APPSTORE_ISSUER_ID }} \
           match_password:${{ env.MATCH_PASSWORD }} \
           match_git_basic_authorization:${{ env.MATCH_GIT_BASIC_AUTHORIZATION }} \
-          key_filepath:fastlane/Api_key.p8
+          key_filepath:secrets/Api_key.p8
