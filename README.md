@@ -199,15 +199,6 @@ Add secrets/Api_key.p8 to .gitignore (probably it will directly be added in `.gi
 
 <hr data-start="378" data-end="381" class="">
 
-## 7. Local .env for Fastlane
-In fastlane/.env, create:
-```
-APPSTORE_KEY_ID=your-key-id
-APPSTORE_ISSUER_ID=your-issuer-id
-```
-
-<hr data-start="378" data-end="381" class="">
-
 ## 11. Fastfile
 ```yaml
 default_platform(:ios)
