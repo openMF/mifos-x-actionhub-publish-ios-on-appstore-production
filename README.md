@@ -199,7 +199,59 @@ Add secrets/Api_key.p8 to .gitignore (probably it will directly be added in `.gi
 
 <hr data-start="378" data-end="381" class="">
 
-## 11. Fastfile
+## 11. Step-by-Step: SSH Setup for Fastlane Match
+1. Generate SSH Key Locally<br>
+   In your terminal, run:
+```yaml
+ssh-keygen -t ed25519 -C "your_email@example.com"
+```
+It will ask for a file path. Press enter a custom path like:
+```yaml
+~/.ssh/match_ci_key
+```
+You can skip setting a passphrase when prompted (just hit enter twice).
+
+This generates two files:
+
+- `~/.ssh/match_ci_key` → Private key
+
+- `~/.ssh/match_ci_key.pub` → Public key
+
+2. Add the Private Key to the SSH Agent (optional but helpful)
+   This step ensures the key is used during local development.
+```yaml
+eval "$(ssh-agent -s)"
+ssh-add ~/.ssh/match_ci_key
+```
+3. Add the Public Key to Your Certificates Repo (GitHub)
+- Go to your certificates repo on GitHub (e.g., openMF/ios-provisioning-profile).
+- Go to Settings → Deploy Keys.
+- Click “Add deploy key”.
+- Set title as `CI Match SSH Key` and paste the content of:
+
+```yaml
+cat ~/.ssh/match_ci_key.pub
+```
+- Check **Allow write access**.
+- Click Add key.
+
+4. Convert the Private Key to Base64
+   This is how we pass it to GitHub Actions securely.
+```yaml
+base64 -i ~/.ssh/match_ci_key | pbcopy
+```
+This command copies the base64-encoded private key to your clipboard (macOS).
+
+5. Save the Private Key as a GitHub Secret
+- Go to the repo with your Fastfile (the project repo, not the certs repo).
+- Navigate to Settings → Secrets and variables → Actions → New repository secret.
+- Add the following:
+    - Name: MATCH_SSH_PRIVATE_KEY
+    - Value: Paste the base64-encoded private key
+
+<hr data-start="378" data-end="381" class="">
+
+## 12. Fastfile
 ```yaml
 default_platform(:ios)
 
@@ -210,8 +262,12 @@ platform :ios do
     key_id = options[:appstore_key_id] || ENV["APPSTORE_KEY_ID"]
     issuer_id = options[:appstore_issuer_id] || ENV["APPSTORE_ISSUER_ID"]
     key_filepath = options[:key_filepath] || ENV["KEY_FILEPATH"] || "./secrets/Api_key.p8"
+    match_type = options[:match_type] || ENV["MATCH_TYPE"]
+    app_identifier = options[:app_identifier] || ENV["APP_IDENTIFIER"]
+    git_url = options[:git_url] || ENV["GIT_URL"]
+    git_branch = options[:git_branch] || ENV["GIT_BRANCH"]
     match_password = options[:match_password] || ENV["MATCH_PASSWORD"]
-    match_git_basic_authorization = options[:match_git_basic_authorization] || ENV["MATCH_GIT_BASIC_AUTHORIZATION"]
+    git_private_key = options[:git_private_key] || ENV["GIT_PRIVATE_KEY"] || "./secrets/match_ci_key"
 
     # Prepares the Fastlane environment for use in CI systems
     setup_ci(
@@ -227,16 +283,18 @@ platform :ios do
 
     # Downloads code signing credentials using the API key
     match(
-      type: "appstore",
-      app_identifier: "yourAppBundleIdentifier",
+      type: match_type,
+      app_identifier: app_identifier,,
       readonly: true,
+      git_url: git_url,
+      git_branch: git_branch,
       api_key: api_key,
-      git_basic_authorization: match_git_basic_authorization
+      git_private_key: git_private_key
     )
 
     # Retrieves the most recent TestFlight build number
     latest = latest_testflight_build_number(
-      app_identifier: "yourAppBundleIdentifier",
+      app_identifier: app_identifier,
       api_key: api_key
     )
 
@@ -251,7 +309,7 @@ platform :ios do
         scheme: "iosApp",
         project: "iosApp/iosApp.xcodeproj",
         output_name: "DeployIosApp.ipa",
-        output_directory: "iosApp/build"
+        output_directory: "iosApp/build",
     )
 
     # Upload to TestFlight
@@ -265,7 +323,7 @@ end
 
 <hr data-start="378" data-end="381" class="">
 
-## 12. Test Locally
+## 13. Test Locally
 ```
 bundle exec fastlane ios beta
 ```
@@ -290,12 +348,16 @@ jobs:
       - name: Use Deploy iOS Action
         uses: openMF/mifos-x-actionhub-publish-ios-on-appstore-production@main
         with:
-          ruby-version: '3.3.5'
-          appstore-key-id: ${{ secrets.APPSTORE_KEY_ID }}
-          appstore-issuer-id: ${{ secrets.APPSTORE_ISSUER_ID }}
-          appstore-private-key: ${{ secrets.APPSTORE_PRIVATE_KEY }}
-          match-password: ${{ secrets.MATCH_PASSWORD }}
-          match-git-basic-auth: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
+           app_identifier: 'org.your.bundle.id'
+           git_url: 'git@github.com:your-org/your-app-certificates.git'
+           git_branch: 'master'
+           match_type: 'appstore'
+           provisioning_profile_name: 'match AppStore org.your.bundle.id'
+           appstore_key_id: ${{ secrets.APPSTORE_KEY_ID }}
+           appstore_issuer_id: ${{ secrets.APPSTORE_ISSUER_ID }}
+           appstore_auth_key: ${{ secrets.APPSTORE_PRIVATE_KEY }}
+           match_password: ${{ secrets.MATCH_PASSWORD }}
+           match_ssh_private_key: ${{ secrets.MATCH_SSH_PRIVATE_KEY }}
 ```
 
 <hr data-start="378" data-end="381" class="">
@@ -308,6 +370,4 @@ APPSTORE_KEY_ID | From App Store Connect API
 APPSTORE_ISSUER_ID | From App Store Connect API
 APPSTORE_PRIVATE_KEY | Paste full .p8 content here
 MATCH_PASSWORD | Password for encrypted match repo
-MATCH_GIT_BASIC_AUTHORIZATION | e.g. username:token in base64 for match repo access
-
-
+MATCH_SSH_PRIVATE_KEY | SSH private key for match repo
